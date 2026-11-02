@@ -104,7 +104,6 @@ barras de probabilidad para las 6 familias.
 - **Demo online (GitHub Pages)**: activando *Settings → Pages → Deploy
   from a branch → main/(root)*, la app queda en
   `https://melygm.github.io/Caracoles-resnet50-vgg16/`
-  (la cámara exige HTTPS, por eso funciona también en el móvil).
 - **Local**: `python -m http.server 8000` en la raíz del repo y abrir
   `http://localhost:8000`.
 
