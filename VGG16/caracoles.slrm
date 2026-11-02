@@ -1,0 +1,39 @@
+#!/bin/bash
+#SBATCH --account=curso04
+#SBATCH --job-name=caracoles_vgg
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --time=08:00:00
+#SBATCH --output=caracoles_vgg16_%j.log
+
+module load rocm/6.4.3
+
+export LD_LIBRARY_PATH=/apps/rocm/rocm-6.4.3/lib:/apps/rocm/rocm-6.4.3/lib64:$LD_LIBRARY_PATH
+
+eval "$(conda shell.bash hook)"
+conda activate caracoles-gpu
+cd ~/caracoles_vgg16
+
+rocm-smi
+
+# Ignorar paquetes de ~/.local 
+export PYTHONNOUSERSITE=1
+
+# Apagar XLA y la Fusión de ROCm
+export TF_XLA_FLAGS="--tf_xla_auto_jit=0"
+export TF_DISABLE_XLA=1
+export TF_ROCM_FUSION_ENABLE=0
+
+# Verificación rápida: si no detecta GPU
+python - <<'EOF'
+import tensorflow as tf
+print("TF version:", tf.__version__)
+gpus = tf.config.list_physical_devices('GPU')
+print("GPUs:", gpus)
+assert gpus, "TensorFlow no detectó ninguna GPU"
+EOF
+
+python vgg_caracoles.py

@@ -1,0 +1,19 @@
+# Datos y archivos pesados (no subir a GitHub)
+CARACOLES.zip
+mis_imagenes/
+*.keras
+*.h5
+*.pth
+*.pt
+
+# Salidas de entrenamiento
+*.log
+caracoles_*.out
+
+# Scripts de SLURM locales
+run_caracoles.sh
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
