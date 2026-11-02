@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Clasificación de caracoles en 6 familias con modelos VGG16 y ResNet50 ejecutándose en el navegador con TensorFlow.js">
+    <title>Caracoles · Clasificador de familias</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+</head>
+<body>
+    <header class="app-header">
+        <div class="app-header__inner">
+            <h1 class="app-title">Clasificación de familias de caracoles</h1>
+            <p class="app-subtitle">Transfer learning con VGG16 y ResNet50 · 6 familias</p>
+        </div>
+    </header>
+
+    <main class="app-main">
+        <section class="view view--active" id="vista-caracoles">
+            <div class="view__container">
+                <h2 class="view__title">Clasificador de caracoles</h2>
+                <p class="view__desc">Activa la cámara y apunta a un caracol. El modelo analizará cada fotograma en tiempo real.</p>
+
+                <div class="model-toggle" role="group" aria-label="Arquitectura del modelo">
+                    <span class="model-toggle__label">Arquitectura:</span>
+                    <div class="toggle-group" data-toggle="arquitectura">
+                        <button class="toggle toggle--active" data-valor="vgg16">VGG16</button>
+                        <button class="toggle" data-valor="resnet50">ResNet50</button>
+                    </div>
+                </div>
+                <div class="model-toggle" role="group" aria-label="Uso de data augmentation">
+                    <span class="model-toggle__label">Aumento:</span>
+                    <div class="toggle-group" data-toggle="aumento">
+                        <button class="toggle" data-valor="sin">SIN augmentation</button>
+                        <button class="toggle toggle--active" data-valor="con">CON augmentation</button>
+                    </div>
+                </div>
+
+                <div class="camera">
+                    <div class="camera__frame">
+                        <video id="video" autoplay playsinline muted></video>
+                        <div class="camera__placeholder" id="camera-placeholder">
+                            <span class="camera__placeholder-text">Cámara desactivada</span>
+                        </div>
+                    </div>
+                    <div class="camera__controls">
+                        <button class="btn btn--primary" id="btn-camara">
+                            <span class="btn__icon">▶</span> Activar cámara
+                        </button>
+                        <button class="btn btn--secondary" id="btn-cambiar-camara" disabled>
+                            ↻ Cambiar cámara
+                        </button>
+                    </div>
+                </div>
+
+                <div class="results" id="resultados">
+                    <h3 class="results__title">Probabilidades</h3>
+                    <div id="barras"></div>
+                </div>
+
+                <p class="status-line" id="status">Cargando modelo…</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/tfjs_models.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
