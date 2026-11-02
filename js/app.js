@@ -24,8 +24,15 @@
         dispositivos: [],             // cámaras de vídeo enumeradas
         indiceDispositivo: 0,         // cámara activa dentro de 'dispositivos'
         bucleId: null,                // id del requestAnimationFrame
-        prediciendo: false            // evita inferencias solapadas
+        prediciendo: false,           // evita inferencias solapadas
+        cargando: false               // hay una descarga de modelo en curso
     };
+
+    // En móvil los modelos (~60-110 MB) se descargan por celular y la RAM
+    // es limitada: se liberan los que no estén en uso y se espacia la
+    // inferencia para no saturar la GPU.
+    const esMovil = /Android|iPhone|iPad|Mobi/i.test(navigator.userAgent)
+        || (window.matchMedia && matchMedia('(pointer: coarse)').matches);
 
     /* ---------------------------------------------------------------
      * Atajos del DOM
@@ -100,6 +107,10 @@
         grupo.querySelectorAll('.toggle').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (btn.classList.contains('toggle--active')) return;
+                if (estado.cargando) {
+                    setStatus('Espera a que termine la descarga del modelo…');
+                    return;
+                }
                 grupo.querySelectorAll('.toggle').forEach(b =>
                     b.classList.toggle('toggle--active', b === btn));
                 if (tipo === 'arquitectura') estado.arquitectura = btn.dataset.valor;
@@ -117,13 +128,20 @@
             setStatus(`Modelo listo: ${nombreModelo()}.`, 'ok');
             return;
         }
-        setStatus(`Cargando ${nombreModelo()}… (puede tardar unos segundos)`);
+        estado.cargando = true;
+        setStatus(`Cargando ${nombreModelo()}…`);
         try {
-            await GestorModelos.cargarModelo(clave);
+            await GestorModelos.cargarModelo(clave, (frac) => {
+                setStatus(`Cargando ${nombreModelo()}… ${Math.round(frac * 100)}%`);
+            });
+            // En móvil solo un modelo en RAM a la vez
+            if (esMovil) GestorModelos.liberarOtros(clave);
             setStatus(`Modelo listo: ${nombreModelo()}.`, 'ok');
         } catch (err) {
             console.error(err);
             setStatus('Modelo no disponible. Coloca los archivos en /modelos.', 'error');
+        } finally {
+            estado.cargando = false;
         }
     }
 
@@ -263,13 +281,16 @@
     function iniciarBucleCamara() {
         detenerBucleCamara();
         let ultimo = 0;
-        const INTERVALO = 250; // ms entre inferencias (rendimiento)
+        // Pausa entre el FIN de una inferencia y el inicio de la siguiente.
+        // En móvil ResNet50 tarda ~1 s por frame; sin pausa la GPU va al 100%
+        // y la interfaz se congela.
+        const INTERVALO = esMovil ? 700 : 300;
 
         const tick = async (t) => {
             if (!estado.camaraActiva) return;
             if (t - ultimo >= INTERVALO && video.readyState >= 2 && !estado.prediciendo) {
-                ultimo = t;
                 await predecirFotograma();
+                ultimo = performance.now();
             }
             estado.bucleId = requestAnimationFrame(tick);
         };
@@ -318,8 +339,16 @@
 
         // TensorFlow listo
         if (typeof tf !== 'undefined') {
-            console.info(`[app] TensorFlow.js backend: ${tf.getBackend()}`);
-            cargarModeloActual();
+            tf.ready().then(() => {
+                const backend = tf.getBackend();
+                console.info(`[app] TensorFlow.js backend: ${backend}`);
+                if (backend !== 'webgl' && backend !== 'webgpu') {
+                    setStatus(
+                        `Aviso: sin WebGL (backend "${backend}") la predicción será muy lenta.`,
+                        'error');
+                }
+                cargarModeloActual();
+            });
         } else {
             setStatus('TensorFlow.js no se cargó. Revisa la conexión.', 'error');
         }

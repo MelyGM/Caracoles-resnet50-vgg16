@@ -53,7 +53,7 @@ const GestorModelos = (() => {
      * @param {string} clave  p. ej. 'vgg16_con_aug'
      * @returns {Promise<tf.GraphModel|tf.LayersModel>}
      */
-    async function cargarModelo(clave) {
+    async function cargarModelo(clave, onProgreso) {
         if (cache[clave]) return cache[clave];
         if (pendientes[clave]) return pendientes[clave];
 
@@ -62,7 +62,8 @@ const GestorModelos = (() => {
 
         pendientes[clave] = (async () => {
             try {
-                const modelo = await tf.loadGraphModel(ruta);
+                const opciones = onProgreso ? { onProgress: onProgreso } : undefined;
+                const modelo = await tf.loadGraphModel(ruta, opciones);
                 cache[clave] = modelo;
                 console.info(`[GestorModelos] Modelo (graph) cargado: ${clave}`);
                 return modelo;
@@ -89,6 +90,19 @@ const GestorModelos = (() => {
 
     function estaCargado(clave) {
         return !!cache[clave];
+    }
+
+    /**
+     * Libera los pesos de todos los modelos en caché salvo `claveMantener`.
+     * Pensado para móvil: 4 modelos en float32 pueden superar 600 MB de RAM.
+     */
+    function liberarOtros(claveMantener) {
+        for (const clave of Object.keys(cache)) {
+            if (clave === claveMantener) continue;
+            try { cache[clave].dispose(); } catch (e) { /* noop */ }
+            delete cache[clave];
+            console.info(`[GestorModelos] Modelo liberado: ${clave}`);
+        }
     }
 
     /* ---------------------------------------------------------------
@@ -160,6 +174,7 @@ const GestorModelos = (() => {
     return {
         cargarModelo,
         estaCargado,
+        liberarOtros,
         claveModelo,
         predecir,
         CLASES,
